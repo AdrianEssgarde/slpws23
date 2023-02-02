@@ -7,11 +7,15 @@ require "bcrypt"
 enable :sessions
 
 get("/") do
-    slim(:new)
+    redirect("items/")
 end
 
 get("/items/") do
-    slim(:index)
+    db = SQLite3::Database.new("db/shop.db")
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM item")
+    p "All items from result: #{result}"
+    slim(:"/index", locals:{item:result})
 end
 
 get("/item/new") do
@@ -26,5 +30,10 @@ post("/item/new") do
     db.execute("INSERT INTO item (name) VALUES (?)", item_title)
     db.execute("INSERT INTO description (content) VALUES (?)", item_description)
     redirect("/items/")
+
+end
+
+post("/item/:id/delete") do
+    id = params[:id].to
 
 end
