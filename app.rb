@@ -63,3 +63,51 @@ post("/item/:id/update") do
     redirect("/items/")
 end
 
+get("/regester/new") do
+    slim(:regester)
+end
+
+post("/user/new") do
+    username = params[:username]
+    password = params[:password]
+    password_confirm = params[:password_confirm]
+
+    if password == password_confirm
+        id = session[:id].to_i
+        password_digest = BCrypt::Password.create(password)
+        db = SQLite3::Database.new("db/shop.db")
+        db.execute("INSERT INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
+        redirect("/login")
+
+    else
+        "The password did not match. Try again!"
+
+    end
+
+end
+
+get("/login") do
+    slim(:login)
+end
+
+post("/login") do
+    username = params[:username]
+    password = params[:password]
+    p username
+    p password
+    db = SQLite3::Database.new("db/shop.db")
+    db.results_as_hash = true
+    result = db.execute("SELECT * FROM user WHERE username = ?", username).first
+    p result
+    pwdigest = result["pwdigest"]
+    id = result["id"]
+
+    if BCrypt::Password.new(pwdigest) == password
+        session[:id] = id
+        redirect("/items/")
+    else
+        "Worng password. Try again!"
+
+    end
+
+end
