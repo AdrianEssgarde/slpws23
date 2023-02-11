@@ -1,14 +1,14 @@
 
 h2 Here every post is displayed 
 
-
 h3 Items:
 - item.each do |item|
     p = item["name"]
     form method="POST" action="/item/#{item["id"]}/delete"
         input type="submit" value="Delete!"
+    a href="/item/#{item["id"]}/edit" Update!
+
 
 h3 Descriptions
 - description.each do |description|
     p = description["content"]
-
