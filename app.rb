@@ -20,18 +20,41 @@ get("/items/") do
     slim(:"/index", locals:{item:result1, description:result2})
 end
 
+get("/my_item") do
+    if session[:id] != nil
+        db = SQLite3::Database.new("db/shop.db")
+        db.results_as_hash = true
+        db.execute()
+    else
+
+        redirect("/login")
+
+    end
+    
+end
+
 get("/item/new") do
     slim(:new)
 end
 
 post("/item/new") do
-    item_title = params[:item_title]
-    item_description = params[:item_description]
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
-    db.execute("INSERT INTO item (name) VALUES (?)", item_title)
-    db.execute("INSERT INTO description (content) VALUES (?)", item_description)
-    redirect("/items/")
+    if session[:id] != nil
+        item_title = params[:item_title]
+        item_description = params[:item_description]
+        db = SQLite3::Database.new("db/shop.db")
+        db.results_as_hash = true
+        db.execute("INSERT INTO item (name) VALUES (?)", item_title)
+        db.execute("INSERT INTO description (content) VALUES (?)", item_description)
+        result = db.execute("SELECT * FROM item")
+        p result
+        p "Resultatet är nu: #{result[result.length-1]}"
+        result_last_item = result[result.length-1]
+        p "Det sanna resultatet är: #{result_last_item["id"]}"
+        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],result_last_item["id"])
+        redirect("/items/")
+    else
+        redirect("/login")
+    end
 
 end
 
@@ -40,6 +63,7 @@ post("/item/:id/delete") do
     db = SQLite3::Database.new("db/shop.db")
     db.execute("DELETE From item WHERE id = ?", id)
     db.execute("DELETE From description WHERE id = ?", id)
+    db.execute("DELETE from user_item_rel WHERE item_id = ?", id)
     redirect("/items/")
 end
 
@@ -72,15 +96,23 @@ post("/user/new") do
     password = params[:password]
     password_confirm = params[:password_confirm]
 
-    if password == password_confirm
-        id = session[:id].to_i
-        password_digest = BCrypt::Password.create(password)
-        db = SQLite3::Database.new("db/shop.db")
-        db.execute("INSERT INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
-        redirect("/login")
+    if 16 >= password.length >= 6
+
+        if password == password_confirm
+            id = session[:id].to_i
+            password_digest = BCrypt::Password.create(password)
+            db = SQLite3::Database.new("db/shop.db")
+            db.execute("INSERT INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
+            redirect("/login")
+
+        else
+            "The password did not match. Try again!"
+
+        end
 
     else
-        "The password did not match. Try again!"
+
+        "The password must include between 6 and 16 characters. Try again!"
 
     end
 
