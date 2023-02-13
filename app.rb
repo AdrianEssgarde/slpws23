@@ -20,11 +20,15 @@ get("/items/") do
     slim(:"/index", locals:{item:result1, description:result2})
 end
 
-get("/my_item") do
+
+get("/item/my") do
     if session[:id] != nil
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
-        db.execute()
+        result = db.execute("SELECT item.name, user_item_rel.item_id, user.id FROM ((user_item_rel INNER JOIN item ON user_item_rel.item_id = item.id) INNER JOIN user ON user_item_rel.user_id = user.id) WHERE user_id = ?", session[:id])
+        p "Här är resultatetttttt: #{result}"
+        result2 = db.execute("SELECT * FROM item WHERE name = ?", )
+        slim(:"/my_item", locals:{user_item_rel:result})
     else
 
         redirect("/login")
@@ -96,7 +100,7 @@ post("/user/new") do
     password = params[:password]
     password_confirm = params[:password_confirm]
 
-    if 16 >= password.length >= 6
+    if password.length>=6
 
         if password == password_confirm
             id = session[:id].to_i
@@ -121,6 +125,16 @@ end
 get("/login") do
     slim(:login)
 end
+
+get("/logout") do
+    slim(:logout)
+end
+
+post("/logout") do
+    session[:id] = nil
+    redirect("/login")
+end
+
 
 post("/login") do
     username = params[:username]
