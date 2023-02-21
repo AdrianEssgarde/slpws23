@@ -143,16 +143,45 @@ post("/login") do
     p password
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    result = db.execute("SELECT * FROM user WHERE username = ?", username).first
-    p result
-    pwdigest = result["pwdigest"]
-    id = result["id"]
+    if result = db.execute("SELECT * FROM user WHERE username = ?", username).first != nil
+        result = db.execute("SELECT * FROM user WHERE username = ?", username).first
+        p result
+        pwdigest = result["pwdigest"]
+        id = result["id"]
+    else
+
+        redirect("/login")
+       
+    end
 
     if BCrypt::Password.new(pwdigest) == password
         session[:id] = id
+        session[:time] = []
+        session[:logins] = []
         redirect("/items/")
+        
+
     else
-        "Worng password. Try again!"
+
+        time1 = Time.now.to_i
+        p time1
+        if session[:time] == nil
+            session[:time] = []
+        end
+        
+        if session[:logins] == nil
+            session[:logins] = []
+        end
+
+        session[:time] << time1
+        session[:logins] << 1
+        p "Tiden är nu: #{session[:time]}"
+        if session[:time][0] - session[:time][session[:time].length-1] < 4 && session[:logins].length > 5
+            sleep 10
+        end
+        redirect("/login")
+
+
 
     end
 
