@@ -8,6 +8,8 @@ html lang="en"
         link rel="stylesheet" href="/css/style.css"/
         title Shop
     body 
+
+        
         nav.nav 
             a.nav_item href="/items/" All items
             a.nav_item href="/item/my" Your items
@@ -19,4 +21,9 @@ html lang="en"
     
         h1 Welcome to the shop!
 
-== yield
+        - if flash[:notice]
+           p.notice = flash[:notice]
+
+    
+    == yield
+    script src="../js/main.js"

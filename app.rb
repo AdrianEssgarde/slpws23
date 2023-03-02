@@ -3,7 +3,8 @@ require "sinatra/reloader"
 require "sqlite3"
 require "slim"
 require "bcrypt"
-require_relative "./model.rb"
+require "sinatra/flash"
+require_relative "model.rb"
 
 enable :sessions
 
@@ -96,6 +97,8 @@ get("/regester/new") do
     slim(:regester)
 end
 
+
+
 post("/user/new") do
     username = params[:username]
     password = params[:password]
@@ -106,20 +109,21 @@ post("/user/new") do
         if password == password_confirm
             id = session[:id].to_i
             password_digest = BCrypt::Password.create(password)
-            db = SQLite3::Database.new("db/shop.db")
-            db.execute("INSERT INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
+            regester_user(username, password_digest)
             redirect("/login")
 
         else
-            "The password did not match. Try again!"
+            flash[:notice] = "The password did not match. Try again!"
 
         end
 
     else
 
-        "The password must include between 6 and 16 characters. Try again!"
+        flash[:notice] = "The password must include between 6 and 16 characters. Try again!"
 
     end
+
+    redirect("/regester/new")
 
 end
 
@@ -133,6 +137,7 @@ end
 
 post("/logout") do
     session[:id] = nil
+    flash[:notice] = "You have been logged out!"
     redirect("/login")
 end
 
@@ -149,6 +154,7 @@ post("/login") do
         p result
         pwdigest = result["pwdigest"]
         id = result["id"]
+        flash[:notice] = "You have been logged in!"
     else
 
         redirect("/login")
@@ -180,6 +186,7 @@ post("/login") do
         if session[:time][0] - session[:time][session[:time].length-1] < 4 && session[:logins].length > 5
             sleep 10
         end
+    
         redirect("/login")
 
 
