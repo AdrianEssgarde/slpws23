@@ -1,6 +1,6 @@
 
 - user_item_rel.each do |item|
-    p = item["name"]
+    p.item_titles = item["name"]
     form action="/item/#{item["item_id"]}/delete" method="POST"
         input type="submit" value="Delete!"
-    a href="/item/#{item["item_id"]}/edit" Update!
+    a.update_link href="/item/#{item["item_id"]}/edit" Update!

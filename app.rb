@@ -4,7 +4,7 @@ require "sqlite3"
 require "slim"
 require "bcrypt"
 require "sinatra/flash"
-require_relative "model.rb"
+require_relative "./model.rb"
 
 enable :sessions
 
@@ -103,23 +103,31 @@ post("/user/new") do
     username = params[:username]
     password = params[:password]
     password_confirm = params[:password_confirm]
+    
+    
+    if password.count("0-9") > 0 && password.count("a-zA-Z") > 0
+    
+        if password.length>=6 && password =~ /[A-Z]/
 
-    if password.length>=6
+            if password == password_confirm
+                id = session[:id].to_i
+                password_digest = BCrypt::Password.create(password)
+                regester_user(username, password_digest)
+                redirect("/login")
 
-        if password == password_confirm
-            id = session[:id].to_i
-            password_digest = BCrypt::Password.create(password)
-            regester_user(username, password_digest)
-            redirect("/login")
+            else
+                flash[:notice] = "The password did not match. Try again!"
 
+            end
+    
         else
-            flash[:notice] = "The password did not match. Try again!"
+
+            flash[:notice] = "The password must include between 6 and 16 characters and at least one neds to be uppercase. Try again!"
 
         end
 
-    else
-
-        flash[:notice] = "The password must include between 6 and 16 characters. Try again!"
+    else 
+        flash[:notice] = "The password must include a number and a letter"
 
     end
 
@@ -145,8 +153,6 @@ end
 post("/login") do
     username = params[:username]
     password = params[:password]
-    p username
-    p password
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
     if result = db.execute("SELECT * FROM user WHERE username = ?", username).first != nil

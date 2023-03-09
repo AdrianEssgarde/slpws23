@@ -4,7 +4,7 @@ h2 Here every post is displayed
 h3 Items:
 - item.each do |item|
     p.item_titles = item["name"]
-    p = description[i][1]
+    p Description:#{description[i][1]}
 
     - i = i+1
         
@@ -12,7 +12,7 @@ h3 Items:
     - if session[:id] == 1
         form method="POST" action="/item/#{item["id"]}/delete"
             input type="submit" value="Delete!"
-        a href="/item/#{item["id"]}/edit" Update!
+        a.update_link href="/item/#{item["id"]}/edit" Update!
 
 
 

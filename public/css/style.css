@@ -17,6 +17,12 @@
 }
 
 .notice {
-    font-size: 2rem;
-    color: red;
+    font-size: 1.4rem;
+    color: black;
+}
+
+.update_link {
+    text-decoration: none;
+    color: black;
+    padding: 0.2rem;
 }
