@@ -27,10 +27,10 @@ get("/item/my") do
     if session[:id] != nil
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
-        result = db.execute("SELECT item.name, user_item_rel.item_id, user.id FROM ((user_item_rel INNER JOIN item ON user_item_rel.item_id = item.id) INNER JOIN user ON user_item_rel.user_id = user.id) WHERE user_id = ?", session[:id])
+        result = db.execute("SELECT * FROM item WHERE item_id_user=?", session[:id])
         p "Här är resultatetttttt: #{result}"
         result2 = db.execute("SELECT * FROM item WHERE name = ?", )
-        slim(:"/my_item", locals:{user_item_rel:result})
+        slim(:"/my_item", locals:{item:result})
     else
 
         redirect("/login")
@@ -61,19 +61,14 @@ get("/item") do
 end
 
 post("/item") do
+    p "Detta är session id :#{session[:id]}"
     if session[:id] != nil
         item_title = params[:item_title]
         item_description = params[:item_description]
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
-        db.execute("INSERT INTO item (name) VALUES (?)", item_title)
+        db.execute("INSERT INTO item (name,item_id_user) VALUES (?,?)", item_title,session[:id])
         db.execute("INSERT INTO description (content) VALUES (?)", item_description)
-        result = db.execute("SELECT * FROM item")
-        p result
-        p "Resultatet är nu: #{result[result.length-1]}"
-        result_last_item = result[result.length-1]
-        p "Det sanna resultatet är: #{result_last_item["id"]}"
-        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],result_last_item["id"])
         redirect("/items/")
     else
         redirect("/login")
@@ -84,14 +79,14 @@ end
 post("/item/:id/delete") do
     id = params[:id].to_i
     db = SQLite3::Database.new("db/shop.db")
-    db.execute("DELETE From item WHERE id = ?", id)
-    db.execute("DELETE From description WHERE id = ?", id)
-    db.execute("DELETE from user_item_rel WHERE item_id = ?", id)
+    db.execute("DELETE FROM item WHERE id = ?", id)
+    db.execute("DELETE FROM description WHERE id = ?", id)
+    db.execute("DELETE FROM user_item_rel WHERE item_id = ?", id)
     redirect("/items/")
 end
 
 get("/item/:id/edit") do
-    id = params[:id]
+    id = params[:id].to_i
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
     result1 = db.execute("SELECT * FROM item WHERE id=?",id).first
@@ -101,17 +96,33 @@ get("/item/:id/edit") do
 end
 
 get("/item/:id/save") do
-    p "Nu körs save routen som den ska!"
-    id = params[:id]
+    id = params[:id].to_i
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
-    result = db.execute("SELECT * FROM user_item_rel")
-    p "Här är det som är nu är tillagt i rel: #{result}"
+    result = db.execute("SELECT item_id FROM user_item_rel WHERE user_id=?", session[:id])
+    if  result.length > 0
+        result.each do |id_hash|
+            if id_hash["item_id"].to_i == id.to_i
+                flash[:notice] = "You have already saved that item!"
+                redirect("/items/")
+            end
+        end
+        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
+        redirect("/items/")
+    else
+        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
+        redirect("/items/")
+
+    end
+
 end
 
 get("/item/:id/unsave") do
-
+    id = params[:id]
+    db = SQLite3::Database.new("db/shop.db")
+    db.results_as_hash = true
+    db.execute("DELETE FROM user_item_rel WHERE item_id=?",id)
+    redirect("/item/save")
 end
 
 

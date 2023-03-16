@@ -1,8 +1,8 @@
-h2 Här är dina sparade annonser!
+h2 Here are your saved items!
 
 - user_item_rel.each do |item|
     p.item_titles = item["name"]
     form action="/item/#{item["item_id"]}/delete" method="POST"
         input type="submit" value="Delete!"
     a.update_link href="/item/#{item["item_id"]}/edit" Update!
-    a.save_link href="/item/#{item["item_id"]}/unsave" Unsave!
+    a.update_link href="/item/#{item["item_id"]}/unsave" Unsave!

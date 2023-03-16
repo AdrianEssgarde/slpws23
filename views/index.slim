@@ -13,13 +13,4 @@ h3 Items:
         form method="POST" action="/item/#{item["id"]}/delete"
             input type="submit" value="Delete!"
         a.update_link href="/item/#{item["id"]}/edit" Update!
-        a.save_link href="/item/#{item["item_id"]}/save" Save!
-
-
-
-
-
-
-/ h3 Descriptions
-/ - description.each do |description|
-/     p = description["content"]
+    a.update_link href="/item/#{item["id"]}/save" Save!
