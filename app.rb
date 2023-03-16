@@ -39,11 +39,28 @@ get("/item/my") do
     
 end
 
-get("/item/new") do
+get("/item/save") do
+
+    if session[:id] != nil
+        db = SQLite3::Database.new("db/shop.db")
+        db.results_as_hash = true
+        result = db.execute("SELECT item.name, user_item_rel.item_id, user.id FROM ((user_item_rel INNER JOIN item ON user_item_rel.item_id = item.id) INNER JOIN user ON user_item_rel.user_id = user.id) WHERE user_id = ?", session[:id])
+        p "Här är resultatetttttt: #{result}"
+        result2 = db.execute("SELECT * FROM item WHERE name = ?", )
+        slim(:"/saved_item", locals:{user_item_rel:result})
+    else
+
+        redirect("/login")
+
+    end
+
+end
+
+get("/item") do
     slim(:new)
 end
 
-post("/item/new") do
+post("/item") do
     if session[:id] != nil
         item_title = params[:item_title]
         item_description = params[:item_description]
@@ -82,6 +99,21 @@ get("/item/:id/edit") do
     slim(:"/edit", locals:{item:result1, description:result2})
 
 end
+
+get("/item/:id/save") do
+    p "Nu körs save routen som den ska!"
+    id = params[:id]
+    db = SQLite3::Database.new("db/shop.db")
+    db.results_as_hash = true
+    db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
+    result = db.execute("SELECT * FROM user_item_rel")
+    p "Här är det som är nu är tillagt i rel: #{result}"
+end
+
+get("/item/:id/unsave") do
+
+end
+
 
 post("/item/:id/update") do
     id = params[:id].to_i
