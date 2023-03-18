@@ -16,9 +16,8 @@ get("/items/") do
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
     result1 = db.execute("SELECT * FROM item")
+    p "Resultat1 är #{result1}"
     result2 = db.execute("SELECT * FROM description")   
-    p "All items from result: #{result1}"
-    p "All items from result: #{result2}"
     slim(:"/index", locals:{item:result1, description:result2})
 end
 
@@ -67,8 +66,9 @@ post("/item") do
         item_description = params[:item_description]
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
-        db.execute("INSERT INTO item (name,item_id_user) VALUES (?,?)", item_title,session[:id])
         db.execute("INSERT INTO description (content) VALUES (?)", item_description)
+        result = db.execute("SELECT id FROM description").last
+        db.execute("INSERT INTO item (name,item_id_user,description_id) VALUES (?,?,?)", item_title,session[:id],result["id"])
         redirect("/items/")
     else
         redirect("/login")
@@ -79,18 +79,30 @@ end
 post("/item/:id/delete") do
     id = params[:id].to_i
     db = SQLite3::Database.new("db/shop.db")
-    db.execute("DELETE FROM item WHERE id = ?", id)
-    db.execute("DELETE FROM description WHERE id = ?", id)
-    db.execute("DELETE FROM user_item_rel WHERE item_id = ?", id)
+    db.results_as_hash = true
+    result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
+    if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
+        db.execute("DELETE FROM item WHERE id = ?", id)
+        db.execute("DELETE FROM description WHERE id = ?", id)
+        db.execute("DELETE FROM user_item_rel WHERE item_id = ?", id)
+        redirect("/items/")
+    else
+    flash[:notice] = "You do not have permission to delete that item!"
     redirect("/items/")
+    end
 end
 
 get("/item/:id/edit") do
     id = params[:id].to_i
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    result1 = db.execute("SELECT * FROM item WHERE id=?",id).first
-    result2 = db.execute("SELECT * FROM description WHERE id=?",id).first
+    result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
+    if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
+        result1 = db.execute("SELECT * FROM item WHERE id=?",id).first
+        result2 = db.execute("SELECT * FROM description WHERE id=?",id).first
+    else
+        flash[:notice] = "You do not have permission to edit that item!"
+    end
     slim(:"/edit", locals:{item:result1, description:result2})
 
 end

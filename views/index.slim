@@ -4,7 +4,8 @@ h2 Here every post is displayed
 h3 Items:
 - item.each do |item|
     p.item_titles = item["name"]
-    p Description:#{description[i][1]}
+    - hash = description[i]
+    p Description:#{hash["content"]}
 
     - i = i+1
         
