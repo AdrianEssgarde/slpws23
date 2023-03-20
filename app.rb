@@ -16,7 +16,6 @@ get("/items/") do
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
     result1 = db.execute("SELECT * FROM item")
-    p "Resultat1 är #{result1}"
     result2 = db.execute("SELECT * FROM description")   
     slim(:"/index", locals:{item:result1, description:result2})
 end
@@ -27,7 +26,6 @@ get("/item/my") do
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
         result = db.execute("SELECT * FROM item WHERE item_id_user=?", session[:id])
-        p "Här är resultatetttttt: #{result}"
         result2 = db.execute("SELECT * FROM item WHERE name = ?", )
         slim(:"/my_item", locals:{item:result})
     else
@@ -44,7 +42,6 @@ get("/item/save") do
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
         result = db.execute("SELECT item.name, user_item_rel.item_id, user.id FROM ((user_item_rel INNER JOIN item ON user_item_rel.item_id = item.id) INNER JOIN user ON user_item_rel.user_id = user.id) WHERE user_id = ?", session[:id])
-        p "Här är resultatetttttt: #{result}"
         result2 = db.execute("SELECT * FROM item WHERE name = ?", )
         slim(:"/saved_item", locals:{user_item_rel:result})
     else
@@ -60,13 +57,12 @@ get("/item") do
 end
 
 post("/item") do
-    p "Detta är session id :#{session[:id]}"
     if session[:id] != nil
         item_title = params[:item_title]
         item_description = params[:item_description]
         db = SQLite3::Database.new("db/shop.db")
         db.results_as_hash = true
-        db.execute("INSERT INTO description (content) VALUES (?)", item_description)
+        insert_into_description(item_description)
         result = db.execute("SELECT id FROM description").last
         db.execute("INSERT INTO item (name,item_id_user,description_id) VALUES (?,?,?)", item_title,session[:id],result["id"])
         redirect("/items/")
@@ -82,9 +78,7 @@ post("/item/:id/delete") do
     db.results_as_hash = true
     result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
     if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
-        db.execute("DELETE FROM item WHERE id = ?", id)
-        db.execute("DELETE FROM description WHERE id = ?", id)
-        db.execute("DELETE FROM user_item_rel WHERE item_id = ?", id)
+        delete(id)
         redirect("/items/")
     else
     flash[:notice] = "You do not have permission to delete that item!"
@@ -119,21 +113,18 @@ get("/item/:id/save") do
                 redirect("/items/")
             end
         end
-        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
-        redirect("/items/")
-    else
-        db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
-        redirect("/items/")
-
+        
     end
+    db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
+    redirect("/items/")
+
+
 
 end
 
 get("/item/:id/unsave") do
     id = params[:id]
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
-    db.execute("DELETE FROM user_item_rel WHERE item_id=?",id)
+    unsave(id)
     redirect("/item/save")
 end
 
@@ -142,9 +133,7 @@ post("/item/:id/update") do
     id = params[:id].to_i
     name = params[:name]
     content = params[:content]
-    db = SQLite3::Database.new("db/shop.db")
-    db.execute("UPDATE item SET name=? WHERE id =?", name, id)
-    db.execute("UPDATE description SET content=? WHERE id=?", content, id)
+    update(id,name,content)
     redirect("/items/")
 end
 
@@ -212,7 +201,6 @@ post("/login") do
     db.results_as_hash = true
     if result = db.execute("SELECT * FROM user WHERE username = ?", username).first != nil
         result = db.execute("SELECT * FROM user WHERE username = ?", username).first
-        p result
         pwdigest = result["pwdigest"]
         id = result["id"]
         flash[:notice] = "You have been logged in!"
@@ -243,7 +231,6 @@ post("/login") do
 
         session[:time] << time1
         session[:logins] << 1
-        p "Tiden är nu: #{session[:time]}"
         if session[:time][0] - session[:time][session[:time].length-1] < 4 && session[:logins].length > 5
             sleep 10
         end
