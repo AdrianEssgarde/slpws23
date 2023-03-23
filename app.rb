@@ -74,9 +74,10 @@ end
 
 post("/item/:id/delete") do
     id = params[:id].to_i
+    p "id är just nu i delete:#{id}"
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
+    result = select_user_id(id)
     if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
         delete(id)
         redirect("/items/")
@@ -98,27 +99,31 @@ get("/item/:id/edit") do
         flash[:notice] = "You do not have permission to edit that item!"
     end
     slim(:"/edit", locals:{item:result1, description:result2})
-
 end
 
 get("/item/:id/save") do
-    id = params[:id].to_i
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
-    result = db.execute("SELECT item_id FROM user_item_rel WHERE user_id=?", session[:id])
-    if  result.length > 0
-        result.each do |id_hash|
-            if id_hash["item_id"].to_i == id.to_i
-                flash[:notice] = "You have already saved that item!"
-                redirect("/items/")
+    if session[:id] != nil
+        id = params[:id].to_i
+        user_id = session[:id]
+        db = SQLite3::Database.new("db/shop.db")
+        db.results_as_hash = true
+        result = select_from_rel(user_id)
+        if  result.length > 0
+            result.each do |id_hash|
+                if id_hash["item_id"].to_i == id.to_i
+                    flash[:notice] = "You have already saved that item!"
+                    redirect("/items/")
+                end
             end
+            
         end
         
+        insert_into_rel(user_id,id)
+        redirect("/items/")
+    else
+        flash[:notice] = "You must login before saving an item!"
+        redirect("/login")
     end
-    db.execute("INSERT INTO user_item_rel (user_id,item_id) VALUES (?,?)",session[:id],id)
-    redirect("/items/")
-
-
 
 end
 
@@ -199,14 +204,15 @@ post("/login") do
     password = params[:password]
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    if result = db.execute("SELECT * FROM user WHERE username = ?", username).first != nil
-        result = db.execute("SELECT * FROM user WHERE username = ?", username).first
+    if result = login(username) != nil
+        result = login(username)
         pwdigest = result["pwdigest"]
         id = result["id"]
-        flash[:notice] = "You have been logged in!"
+        
     else
+        flash[:notice] = "There is no regesterd account with that username! Regester account before loging in!"
 
-        redirect("/login")
+        redirect("/regester/new")
        
     end
 
@@ -214,11 +220,12 @@ post("/login") do
         session[:id] = id
         session[:time] = []
         session[:logins] = []
+        flash[:notice] = "You have been logged in #{username}!"
         redirect("/items/")
         
 
     else
-
+        flash[:notice] = "The password does not match! Try again!"
         time1 = Time.now.to_i
         p time1
         if session[:time] == nil

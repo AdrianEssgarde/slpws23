@@ -1,6 +1,6 @@
 h2 These are all your posted items!
 - item.each do |item|
     p.item_titles = item["name"]
-    form action="/item/#{item["item_id"]}/delete" method="POST"
+    form action="/item/#{item["id"]}/delete" method="POST"
         input type="submit" value="Delete!"
-    a.update_link href="/item/#{item["item_id"]}/edit" Update!
+    a.update_link href="/item/#{item["id"]}/edit" Update!
