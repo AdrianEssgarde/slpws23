@@ -1,4 +1,6 @@
 form action="/item/#{item["id"]}/update" method="POST"
+    - p "Item är just nu:#{item}"
+    - p "Description är just nu:#{description}"
     input type="text" name="name" value="#{item["name"]}"
     input type="text" name="content" value="#{description["content"]}"
     input type="submit" value="Edit!"

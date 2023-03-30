@@ -13,20 +13,18 @@ get("/") do
 end
 
 get("/items/") do
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
-    result1 = db.execute("SELECT * FROM item")
-    result2 = db.execute("SELECT * FROM description")   
+    db = connect_to_db()
+    result1 = select_from_item()
+    result2 = select_from_description()
     slim(:"/index", locals:{item:result1, description:result2})
 end
 
 
 get("/item/my") do
+    user_id = session[:id]
     if session[:id] != nil
-        db = SQLite3::Database.new("db/shop.db")
-        db.results_as_hash = true
-        result = db.execute("SELECT * FROM item WHERE item_id_user=?", session[:id])
-        result2 = db.execute("SELECT * FROM item WHERE name = ?", )
+        db = connect_to_db()
+        result = select_user_item(user_id)
         slim(:"/my_item", locals:{item:result})
     else
 
@@ -37,12 +35,10 @@ get("/item/my") do
 end
 
 get("/item/save") do
-
+    user_id = session[:id]
     if session[:id] != nil
-        db = SQLite3::Database.new("db/shop.db")
-        db.results_as_hash = true
-        result = db.execute("SELECT item.name, user_item_rel.item_id, user.id FROM ((user_item_rel INNER JOIN item ON user_item_rel.item_id = item.id) INNER JOIN user ON user_item_rel.user_id = user.id) WHERE user_id = ?", session[:id])
-        result2 = db.execute("SELECT * FROM item WHERE name = ?", )
+        db = connect_to_db()
+        result = inner_join(user_id)
         slim(:"/saved_item", locals:{user_item_rel:result})
     else
 
@@ -57,14 +53,16 @@ get("/item") do
 end
 
 post("/item") do
+    user_id = session[:id]
+    db = connect_to_db()
+    description_id = session[:id]
     if session[:id] != nil
         item_title = params[:item_title]
         item_description = params[:item_description]
-        db = SQLite3::Database.new("db/shop.db")
-        db.results_as_hash = true
         insert_into_description(item_description)
-        result = db.execute("SELECT id FROM description").last
-        db.execute("INSERT INTO item (name,item_id_user,description_id) VALUES (?,?,?)", item_title,session[:id],result["id"])
+        result = select_last_description()
+        description_id = result["id"]
+        insert_into_item(item_title,user_id,description_id)
         redirect("/items/")
     else
         redirect("/login")
@@ -75,8 +73,7 @@ end
 post("/item/:id/delete") do
     id = params[:id].to_i
     p "id är just nu i delete:#{id}"
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
+    db = connect_to_db()
     result = select_user_id(id)
     if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
         delete(id)
@@ -89,12 +86,13 @@ end
 
 get("/item/:id/edit") do
     id = params[:id].to_i
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
-    result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
+    db = connect_to_db()
+    result = select_user_id(id)
     if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
-        result1 = db.execute("SELECT * FROM item WHERE id=?",id).first
-        result2 = db.execute("SELECT * FROM description WHERE id=?",id).first
+        result1 = select_from_item_id(id)
+        description_id = result1["description_id"]
+        result2 = select_from_description_id(description_id)
+      
     else
         flash[:notice] = "You do not have permission to edit that item!"
     end
@@ -105,8 +103,7 @@ get("/item/:id/save") do
     if session[:id] != nil
         id = params[:id].to_i
         user_id = session[:id]
-        db = SQLite3::Database.new("db/shop.db")
-        db.results_as_hash = true
+        db = connect_to_db()
         result = select_from_rel(user_id)
         if  result.length > 0
             result.each do |id_hash|
@@ -202,8 +199,7 @@ end
 post("/login") do
     username = params[:username]
     password = params[:password]
-    db = SQLite3::Database.new("db/shop.db")
-    db.results_as_hash = true
+    db = connect_to_db()
     if result = login(username) != nil
         result = login(username)
         pwdigest = result["pwdigest"]
