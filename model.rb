@@ -6,11 +6,9 @@ require "bcrypt"
 require "sinatra/flash"
 require_relative "./app.rb"
 
-#module
-
 def regester_user(username, password_digest)
     db = SQLite3::Database.new("db/shop.db")
-    db.execute("INSERT INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
+    db.execute("INSERT or IGNORE INTO user (username,pwdigest) VALUES (?,?)",username,password_digest)
 end
 
 def connect_to_db()
@@ -30,9 +28,10 @@ end
 def delete(id)
     db = SQLite3::Database.new("db/shop.db")
     db.results_as_hash = true
-    result = db.execute("SELECT item_id_user FROM item WHERE id=?",id).first
+    result = db.execute("SELECT item_id_user,description_id FROM item WHERE id=?",id).first
+    description_id = result["description_id"]
     db.execute("DELETE FROM item WHERE id = ?", id)
-    db.execute("DELETE FROM description WHERE id = ?", id)
+    db.execute("DELETE FROM description WHERE id = ?", description_id)
     db.execute("DELETE FROM user_item_rel WHERE item_id = ?", id)
 end
 
@@ -134,4 +133,47 @@ def select_last_description()
     db.results_as_hash = true
     result = db.execute("SELECT id FROM description").last
     return result
+end
+
+def check_password(pwdigest,password)
+    if BCrypt::Password.new(pwdigest) == password
+        return true
+    else
+        return false
+    end
+end
+
+def password_ok(username,password,password_confirm)
+    if password.count("0-9") > 0 && password.count("a-zA-Z") > 0
+    
+        if password.length>=6 && password =~ /[A-Z]/
+
+            if password == password_confirm
+                id = session[:id].to_i
+                password_digest = BCrypt::Password.create(password)
+                regester_user(username, password_digest)
+                redirect("/login")
+
+            else
+                return flash[:notice] = "The password did not match. Try again!"
+
+            end
+    
+        else
+
+            return flash[:notice] = "The password must include between 6 and 16 characters and at least one neds to be uppercase. Try again!"
+
+        end
+
+    else 
+        return flash[:notice] = "The password must include a number and a letter"
+    end
+end
+
+def connect(id)
+    db = SQLite3::Database.new("db/shop.db")
+    db.results_as_hash = true
+    result = db.execute("SELECT item_id_user,description_id FROM item WHERE id=?",id).first
+    return result
+
 end

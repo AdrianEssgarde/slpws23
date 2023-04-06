@@ -1,13 +1,16 @@
 
 h2 Here every post is displayed 
-- i = 0
 h3 Items:
 - item.each do |item|
     p.item_titles = item["name"]
-    - hash = description[i]
-    p Description:#{hash["content"]}
+    - description_id = item["description_id"]
+    - i = 0
+    - while i < description.length 
+        - if description[i][0] == description_id
+            - hash = description[i]
+            p Description:#{hash["content"]}
+        - i+=1    
 
-    - i = i+1
         
 
     - if session[:id] == 1

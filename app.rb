@@ -8,10 +8,15 @@ require_relative "./model.rb"
 
 enable :sessions
 
+# Redirects the root path to the items index
 get("/") do
     redirect("items/")
 end
 
+# Retrieves all items and their descriptions and renders the index view
+#
+# @see Model#select_from_item
+# @see Model#select_from_description
 get("/items/") do
     db = connect_to_db()
     result1 = select_from_item()
@@ -25,7 +30,7 @@ get("/item/my") do
     if session[:id] != nil
         db = connect_to_db()
         result = select_user_item(user_id)
-        slim(:"/my_item", locals:{item:result})
+        slim(:"items/my_item", locals:{item:result})
     else
 
         redirect("/login")
@@ -34,12 +39,15 @@ get("/item/my") do
     
 end
 
+# Retrieves the current user's items and renders the my_item view
+#
+# @see Model#select_user_item
 get("/item/save") do
     user_id = session[:id]
     if session[:id] != nil
         db = connect_to_db()
         result = inner_join(user_id)
-        slim(:"/saved_item", locals:{user_item_rel:result})
+        slim(:"items/saved_item", locals:{user_item_rel:result})
     else
 
         redirect("/login")
@@ -48,10 +56,19 @@ get("/item/save") do
 
 end
 
+# Renders the new item view
 get("/item") do
     slim(:new)
 end
 
+# Creates a new item and redirects to the items index
+#
+# @param [String] item_title, The title of the item
+# @param [String] item_description, The description of the item
+#
+# @see Model#insert_into_description
+# @see Model#select_last_description
+# @see Model#insert_into_item
 post("/item") do
     user_id = session[:id]
     db = connect_to_db()
@@ -70,9 +87,19 @@ post("/item") do
 
 end
 
+# Deletes an item and redirects to the items index
+#
+# @param [Integer] id, The id of the item to be deleted
+#
+# @see Model#connect
+# @see Model#select_user_id
+# @see Model#delete
 post("/item/:id/delete") do
     id = params[:id].to_i
-    p "id är just nu i delete:#{id}"
+    result = connect(id)
+    p "result är är just nu: #{result}"
+    description_id = result["description_id"]
+    p "Description id är just nu: #{description_id}"
     db = connect_to_db()
     result = select_user_id(id)
     if result["item_id_user"].to_i == session[:id].to_i || session[:id] == 1
@@ -84,6 +111,13 @@ post("/item/:id/delete") do
     end
 end
 
+# Retrieves an item for editing and renders the edit view
+#
+# @param [Integer] id, The id of the item to be edited
+#
+# @see Model#select_user_id
+# @see Model#select_from_item_id
+# @see Model#select_from_description_id
 get("/item/:id/edit") do
     id = params[:id].to_i
     db = connect_to_db()
@@ -96,9 +130,15 @@ get("/item/:id/edit") do
     else
         flash[:notice] = "You do not have permission to edit that item!"
     end
-    slim(:"/edit", locals:{item:result1, description:result2})
+    slim(:"items/edit", locals:{item:result1, description:result2})
 end
 
+# Saves an item for the current user and redirects to the items index
+#
+# @param [Integer] id, The id of the item to be saved
+#
+# @see Model#select_from_rel
+# @see Model#insert_into_rel
 get("/item/:id/save") do
     if session[:id] != nil
         id = params[:id].to_i
@@ -124,13 +164,24 @@ get("/item/:id/save") do
 
 end
 
+# Unsaves an item for the current user and redirects to the saved items view
+#
+# @param [Integer] id, The id of the item to be unsaved
+#
+# @see Model#unsave
 get("/item/:id/unsave") do
     id = params[:id]
     unsave(id)
     redirect("/item/save")
 end
 
-
+# Updates an item and redirects to the items index
+#
+# @param [Integer] id, The id of the item to be updated
+# @param [String] name, The new name of the item
+# @param [String] content, The new content of the item
+#
+# @see Model#update
 post("/item/:id/update") do
     id = params[:id].to_i
     name = params[:name]
@@ -139,63 +190,58 @@ post("/item/:id/update") do
     redirect("/items/")
 end
 
+# Renders the register view
 get("/regester/new") do
     slim(:regester)
 end
 
 
-
+# Creates a new user and redirects to '/register/new'
+#
+# @param [String] username, The username of the new user
+# @param [String] password, The password of the new user
+# @param [String] password_confirm, The password confirmation of the new user
+#
+# @see Model#password_ok
 post("/user/new") do
     username = params[:username]
     password = params[:password]
     password_confirm = params[:password_confirm]
     
-    
-    if password.count("0-9") > 0 && password.count("a-zA-Z") > 0
-    
-        if password.length>=6 && password =~ /[A-Z]/
-
-            if password == password_confirm
-                id = session[:id].to_i
-                password_digest = BCrypt::Password.create(password)
-                regester_user(username, password_digest)
-                redirect("/login")
-
-            else
-                flash[:notice] = "The password did not match. Try again!"
-
-            end
-    
-        else
-
-            flash[:notice] = "The password must include between 6 and 16 characters and at least one neds to be uppercase. Try again!"
-
-        end
-
-    else 
-        flash[:notice] = "The password must include a number and a letter"
-
-    end
+    password_ok(username,password,password_confirm)
 
     redirect("/regester/new")
 
 end
 
+# Renders the login page
+#
+# @see View#login
 get("/login") do
     slim(:login)
 end
 
+# Logs out the user and redirects to '/login'
+#
 get("/logout") do
     slim(:logout)
 end
 
+# Logs out the user and redirects to '/login'
+#
 post("/logout") do
     session[:id] = nil
     flash[:notice] = "You have been logged out!"
     redirect("/login")
 end
 
-
+# Logs in the user and redirects to '/items'
+#
+# @param [String] username, The username of the user
+# @param [String] password, The password of the user
+#
+# @see Model#login
+# @see Model#check_password
 post("/login") do
     username = params[:username]
     password = params[:password]
@@ -212,7 +258,7 @@ post("/login") do
        
     end
 
-    if BCrypt::Password.new(pwdigest) == password
+    if check_password(pwdigest,password) == true
         session[:id] = id
         session[:time] = []
         session[:logins] = []
