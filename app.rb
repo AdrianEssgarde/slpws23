@@ -7,6 +7,7 @@ require "sinatra/flash"
 require_relative "./model.rb"
 
 enable :sessions
+include Model
 
 # Redirects the root path to the items index
 get("/") do
@@ -126,11 +127,12 @@ get("/item/:id/edit") do
         result1 = select_from_item_id(id)
         description_id = result1["description_id"]
         result2 = select_from_description_id(description_id)
+        slim(:"items/edit", locals:{item:result1, description:result2})
       
     else
         flash[:notice] = "You do not have permission to edit that item!"
     end
-    slim(:"items/edit", locals:{item:result1, description:result2})
+    
 end
 
 # Saves an item for the current user and redirects to the items index
@@ -269,7 +271,6 @@ post("/login") do
     else
         flash[:notice] = "The password does not match! Try again!"
         time1 = Time.now.to_i
-        p time1
         if session[:time] == nil
             session[:time] = []
         end
